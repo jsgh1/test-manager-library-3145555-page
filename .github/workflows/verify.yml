@@ -1,0 +1,29 @@
+name: Verify public static page
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify independent static page
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          from html.parser import HTMLParser
+          html = Path("index.html").read_text()
+          css = Path("style.css").read_text()
+          assert "<html" in html.lower()
+          assert "viewport" in html.lower()
+          assert "@media" in css
+          assert "http://localhost:8000" not in html
+          assert "/api/v1" not in html
+          assert "fetch(" not in html
+          assert '<section' in html and 'id="features"' in html
+          class Validator(HTMLParser):
+              def error(self, message): raise AssertionError(message)
+          Validator().feed(html)
+          print("Static public page parses, includes responsive styles and has no API dependency.")
+          PY
